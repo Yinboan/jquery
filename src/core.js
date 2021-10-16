@@ -112,76 +112,97 @@ jQuery.fn = jQuery.prototype = {
 	}
 };
 
-jQuery.extend = jQuery.fn.extend = function() {
-	var options, name, src, copy, copyIsArray, clone,
-		target = arguments[ 0 ] || {},
-		i = 1,
-		length = arguments.length,
-		deep = false;
+//修复死递归
+    jQuery.extend = jQuery.fn.extend = function() {
+    var options, name, src, copy, copyIsArray, clone,markArr,
+        target = arguments[ 0 ] || {},
+        i = 1,
+        length = arguments.length,
+        deep = false;
 
-	// Handle a deep copy situation
-	if ( typeof target === "boolean" ) {
-		deep = target;
+    // Handle a deep copy situation
+    if ( typeof target === "boolean" ) {
+        deep = target;
 
-		// Skip the boolean and the target
-		target = arguments[ i ] || {};
-		i++;
-	}
+        // Skip the boolean and the target
+        target = arguments[ i ] || {};
+        i++;
+    }
 
-	// Handle case when target is a string or something (possible in deep copy)
-	if ( typeof target !== "object" && typeof target !== "function" ) {
-		target = {};
-	}
+    //Handle markArr
+    markArr = arguments[length-1]
+    if(Array.isArray(markArr) && markArr.mark === true){
+        //markArr is not used as a parameter
+        length--;
+    }else{
+        //First execution，Initialize markArr
+        markArr = [];
+        markArr.mark = true;
+    }
 
-	// Extend jQuery itself if only one argument is passed
-	if ( i === length ) {
-		target = this;
-		i--;
-	}
+    // Handle case when target is a string or something (possible in deep copy)
+    if ( typeof target !== "object" && typeof target !== "function" ) {
+        target = {};
+    }
 
-	for ( ; i < length; i++ ) {
+    // Extend jQuery itself if only one argument is passed
+    if ( i === length ) {
+        target = this;
+        i--;
+    }
 
-		// Only deal with non-null/undefined values
-		if ( ( options = arguments[ i ] ) != null ) {
+    for ( ; i < length; i++ ) {
 
-			// Extend the base object
-			for ( name in options ) {
-				copy = options[ name ];
+        // Only deal with non-null/undefined values
+        if ( ( options = arguments[ i ] ) != null ) {
 
-				// Prevent Object.prototype pollution
-				// Prevent never-ending loop
-				if ( name === "__proto__" || target === copy ) {
-					continue;
-				}
+            //Found a loop, return directly
+            if( markArr.indexOf(options) >= 0 ){
+                return options;
+            }
+	    
+	    //Add options to the processed list(markArr) 		
+            markArr.push(options)
 
-				// Recurse if we're merging plain objects or arrays
-				if ( deep && copy && ( jQuery.isPlainObject( copy ) ||
-					( copyIsArray = Array.isArray( copy ) ) ) ) {
-					src = target[ name ];
 
-					// Ensure proper type for the source value
-					if ( copyIsArray && !Array.isArray( src ) ) {
-						clone = [];
-					} else if ( !copyIsArray && !jQuery.isPlainObject( src ) ) {
-						clone = {};
-					} else {
-						clone = src;
-					}
-					copyIsArray = false;
+            // Extend the base object
+            for ( name in options ) {
+                copy = options[ name ];
 
-					// Never move original objects, clone them
-					target[ name ] = jQuery.extend( deep, clone, copy );
+                // Prevent Object.prototype pollution
+                // Prevent never-ending loop
+                if ( name === "__proto__" || target === copy ) {
+                    continue;
+                }
 
-				// Don't bring in undefined values
-				} else if ( copy !== undefined ) {
-					target[ name ] = copy;
-				}
-			}
-		}
-	}
+                // Recurse if we're merging plain objects or arrays
+                if ( deep && copy && ( jQuery.isPlainObject( copy ) ||
+                    ( copyIsArray = Array.isArray( copy ) ) ) ) {
+                    src = target[ name ];
 
-	// Return the modified object
-	return target;
+                    // Ensure proper type for the source value
+                    if ( copyIsArray && !Array.isArray( src ) ) {
+                        clone = [];
+                    } else if ( !copyIsArray && !jQuery.isPlainObject( src ) ) {
+                        clone = {};
+                    } else {
+                        clone = src;
+                    }
+                    copyIsArray = false;
+
+                    // Never move original objects, clone them. Pass markArr to the recursive function
+                    target[ name ] = jQuery.extend( deep, clone, copy, markArr);
+
+                // Don't bring in undefined values
+                } else if ( copy !== undefined ) {
+                    target[ name ] = copy;
+                }
+            }
+        }
+    }
+
+    // Return the modified object
+    return target;
 };
 
 jQuery.extend( {
